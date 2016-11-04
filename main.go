@@ -190,6 +190,39 @@ func saveProxies() {
 		&Proxies{
 			func() {
 				for {
+					resp, err := http.Get("http://free-proxy-list.net/")
+					if err != nil {
+						log.Println(err)
+						time.Sleep(RETRY_TIME)
+					}
+					conte, err := ioutil.ReadAll(resp.Body)
+					resp.Body.Close()
+					if err != nil {
+						log.Println(err)
+						time.Sleep(RETRY_TIME)
+					}
+					re, _ := regexp.Compile(`<tr><td>(\d+\.\d+\.\d+\.\d+)</td><td>(\d+)</td><td>.*</td><td>.*</td><td>.*</td><td>.*</td><td>(yes|no)</td><td>.*</td></tr>`)
+					sca := re.FindAllStringSubmatch(string(conte), -1)
+					for _, i := range sca {
+						if len(i) != 4 {
+							log.Fatal("WTF??")
+						}
+						if i[3] == "yes" {
+							i[3] = "https"
+						} else if i[3] == "no" {
+							i[3] = "http"
+						}
+						ne := Proxy{i[3], i[1], i[2]}
+						addProxy(ne)
+					}
+					time.Sleep(5 * time.Minute)
+				}
+			},
+		})
+	updater = append(updater,
+		&Proxies{
+			func() {
+				for {
 					resp, err := http.Get("https://www.sslproxies.org/")
 					if err != nil {
 						log.Println(err)
