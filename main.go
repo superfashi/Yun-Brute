@@ -130,7 +130,7 @@ func saveProxies() {
 			func() {
 				for {
 					resp, err := http.Get("http://api.xicidaili.com/free2016.txt")
-					if err != nil {
+					if err != nil || resp.Body == nil {
 						log.Println(err)
 						time.Sleep(RETRY_TIME)
 					}
@@ -153,7 +153,7 @@ func saveProxies() {
 			func() {
 				for {
 					resp, err := http.Get("http://proxy.tekbreak.com/1000/json")
-					if err != nil {
+					if err != nil || resp.Body == nil {
 						log.Println(err)
 						time.Sleep(RETRY_TIME)
 					}
@@ -191,7 +191,7 @@ func saveProxies() {
 			func() {
 				for {
 					resp, err := http.Get("http://free-proxy-list.net/")
-					if err != nil {
+					if err != nil || resp.Body == nil {
 						log.Println(err)
 						time.Sleep(RETRY_TIME)
 					}
@@ -224,7 +224,7 @@ func saveProxies() {
 			func() {
 				for {
 					resp, err := http.Get("https://www.sslproxies.org/")
-					if err != nil {
+					if err != nil || resp.Body == nil {
 						log.Println(err)
 						time.Sleep(RETRY_TIME)
 					}
@@ -333,9 +333,6 @@ func builder(now string) (*http.Response, Proxy, error) {
 	req.Header.Set("Origin", "https://pan.baidu.com")
 	req.Header.Set("Referer", refer)
 	resp, err := session.Do(req)
-	if err != nil && strings.Contains(err.Error(), "error connecting to proxy") { // ugly way
-		increProxy(pro)
-	}
 	return resp, pro, err
 }
 
@@ -362,6 +359,8 @@ func tester(work int64) {
 					log.Println("Unknown error! Server returned", resp.StatusCode)
 				}
 				resp.Body.Close()
+			} else if strings.Contains(err.Error(), "error connecting to proxy") {
+				increProxy(pro)
 			}
 			time.Sleep(RETRY_TIME)
 		}
@@ -378,7 +377,6 @@ func init() {
 	mapLocker = new(sync.Mutex)
 	useable = new(AtomBool)
 	useable.lock = new(sync.Mutex)
-	useable.Set(true)
 	proxies = make(map[Proxy]int)
 	saveProxies() // For future expansion of proxy
 	var indi int
