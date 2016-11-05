@@ -348,14 +348,17 @@ func tester(work int64) {
 							log.Println("Key found!", now)
 							os.Exit(0)
 						} else if info.Errno != -9 {
+							increProxy(pro)
 							log.Println("Unknown error! Service returned", info.Errno, "with message:", info.ErrMsg)
 						} else {
+							addProxy(pro) // Set the counter to zero
 							break
 						}
 					}
 				} else if resp.StatusCode == 404 {
 					deleteProxy(pro)
 				} else {
+					increProxy(pro)
 					log.Println("Unknown error! Server returned", resp.StatusCode)
 				}
 				resp.Body.Close()
