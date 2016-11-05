@@ -138,7 +138,7 @@ func saveProxies() {
 					for sca.Scan() {
 						spl := strings.Split(sca.Text(), ":")
 						if len(spl) != 2 {
-							log.Fatal("WTF??")
+							log.Fatal("Unexpected error: ", sca.Text())
 						}
 						ne := Proxy{"http", spl[0], spl[1]}
 						addProxy(ne)
@@ -205,7 +205,7 @@ func saveProxies() {
 					sca := re.FindAllStringSubmatch(string(conte), -1)
 					for _, i := range sca {
 						if len(i) != 4 {
-							log.Fatal("WTF??")
+							log.Fatal("Unexpected error: ", i)
 						}
 						if i[3] == "yes" {
 							i[3] = "https"
@@ -238,7 +238,7 @@ func saveProxies() {
 					sca := re.FindAllStringSubmatch(string(conte), -1)
 					for _, i := range sca {
 						if len(i) != 3 {
-							log.Fatal("WTF??")
+							log.Fatal("Unexpected error: ", i)
 						}
 						ne := Proxy{"https", i[1], i[2]}
 						addProxy(ne)
@@ -265,14 +265,14 @@ func saveResolver() {
 			func(re *regexp.Regexp, ori string) {
 				ret := re.FindStringSubmatch(ori)
 				if len(ret) != 3 {
-					log.Fatal("WTF??", ori)
+					log.Fatal("Unexpected error: ", ori)
 				}
 				shareid = ret[1]
 				uk = ret[2]
 				refer = ori
 			},
 		})
-	re2, _ := regexp.Compile(`//pan\.baidu\.com/s/([a-zA-Z0-9]+)`)
+	re2, _ := regexp.Compile(`//pan\.baidu\.com/s/[a-zA-Z0-9]+`)
 	resolver = append(resolver,
 		&Resolve{
 			re2,
@@ -297,7 +297,7 @@ func saveResolver() {
 						if resolver[0].re.MatchString(resp.Header.Get("Location")) {
 							resolver[0].fun(resolver[0].re, resp.Header.Get("Location"))
 						} else {
-							log.Fatal("WTF??", ori, resp.Header.Get("Location"))
+							log.Fatal("Unexpected error: ", ori, resp.Header.Get("Location"))
 						}
 						break
 					}
@@ -401,7 +401,6 @@ func init() {
 	bar.ShowCounters = false
 	bar.ShowSpeed = true
 	bar.ShowTimeLeft = true
-	bar.ShowFinalTime = true
 	bar.Set64(start)
 	bar.Start()
 	c := make(chan os.Signal, 1)
@@ -415,17 +414,7 @@ func init() {
 }
 
 func main() {
-	//go func() {
-	//	for {
-	//		log.Println(len(proxies))
-	//		for i, k := range proxies {
-	//			log.Println(i, k)
-	//			break
-	//		}
-	//		time.Sleep(RETRY_TIME)
-	//	}
-	//}() // DEBUG
-	log.SetPrefix("\n")
+	log.SetPrefix("\n") // For compatibility with indicator
 	wg.Add(int(*thread))
 	for i := int64(0); i < *thread; i++ {
 		go tester(start + i)
