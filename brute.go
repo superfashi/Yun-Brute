@@ -31,7 +31,7 @@ const (
 var (
 	link        = kingpin.Arg("link", "URL of BaiduYun file you want to get.").Required().String()
 	preset      = kingpin.Flag("preset", "The preset start of key to brute.").Short('p').Default("0000").String()
-	thread      = kingpin.Flag("thread", "Number of thread.").Short('t').Default("10").Int64()
+	thread      = kingpin.Flag("thread", "Number of threads.").Short('t').Default("1000").Int64()
 	resolver    []*Resolve
 	bar         *pb.ProgressBar
 	shareid, uk string
@@ -190,7 +190,7 @@ func saveProxies() {
 		&Proxies{
 			func() {
 				for {
-					resp, err := http.Get("http://free-proxy-list.net/")
+					resp, err := http.Get("https://free-proxy-list.net/")
 					if err != nil || resp.Body == nil {
 						log.Println(err)
 						time.Sleep(RETRY_TIME)
@@ -345,11 +345,11 @@ func tester(work int64) {
 				if resp.StatusCode == 200 {
 					if err = json.NewDecoder(resp.Body).Decode(info); err == nil {
 						if info.Errno == 0 {
-							log.Println("Key found!", now)
+							log.Printf("Key found: %04s!", now)
 							os.Exit(0)
 						} else if info.Errno != -9 {
 							increProxy(pro)
-							log.Println("Unknown error! Service returned", info.Errno, "with message:", info.ErrMsg)
+							log.Printf("Unknown error! Service returned %d with message: \"%s\"", info.Errno, info.ErrMsg)
 						} else {
 							addProxy(pro) // Set the counter to zero
 							break
@@ -359,10 +359,10 @@ func tester(work int64) {
 					deleteProxy(pro)
 				} else {
 					increProxy(pro)
-					log.Println("Unknown error! Server returned", resp.StatusCode)
+					log.Printf("Unknown error! Server returned %d!", resp.StatusCode)
 				}
 				resp.Body.Close()
-			} else if strings.Contains(err.Error(), "error connecting to proxy") {
+			} else if strings.Contains(err.Error(), "error connecting to proxy") { // ugly but works
 				increProxy(pro)
 			}
 			time.Sleep(RETRY_TIME)
@@ -377,11 +377,6 @@ func init() {
 	kingpin.CommandLine.HelpFlag.Short('h')
 	kingpin.Parse()
 	saveResolver() // For future expansion of resolver
-	mapLocker = new(sync.Mutex)
-	useable = new(AtomBool)
-	useable.lock = new(sync.Mutex)
-	proxies = make(map[Proxy]int)
-	saveProxies() // For future expansion of proxy
 	var indi int
 	for indi = 0; indi < len(resolver); indi++ {
 		if resolver[indi].re.MatchString(*link) {
@@ -392,6 +387,11 @@ func init() {
 	if indi == len(resolver) {
 		log.Fatal("No proper resolver found!")
 	}
+	mapLocker = new(sync.Mutex)
+	useable = new(AtomBool)
+	useable.lock = new(sync.Mutex)
+	proxies = make(map[Proxy]int)
+	saveProxies() // For future expansion of proxy
 	for _, i := range updater {
 		go i.update()
 	}
@@ -414,7 +414,7 @@ func init() {
 }
 
 func main() {
-	log.SetPrefix("\n") // For compatibility with indicator
+	log.SetPrefix("\r") // For compatibility with indicator
 	wg.Add(int(*thread))
 	for i := int64(0); i < *thread; i++ {
 		go tester(start + i)
