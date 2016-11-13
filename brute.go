@@ -130,9 +130,10 @@ func saveProxies() {
 			func() {
 				for {
 					resp, err := http.Get("http://api.xicidaili.com/free2016.txt")
-					if err != nil || resp.Body == nil {
+					if err != nil {
 						log.Println(err)
 						time.Sleep(RETRY_TIME)
+						continue
 					}
 					sca := bufio.NewScanner(resp.Body)
 					for sca.Scan() {
@@ -153,9 +154,10 @@ func saveProxies() {
 			func() {
 				for {
 					resp, err := http.Get("http://proxy.tekbreak.com/1000/json")
-					if err != nil || resp.Body == nil {
+					if err != nil {
 						log.Println(err)
 						time.Sleep(RETRY_TIME)
+						continue
 					}
 					var sca []struct {
 						IP   string `json:"ip"`
@@ -165,6 +167,7 @@ func saveProxies() {
 					if err := json.NewDecoder(resp.Body).Decode(&sca); err != nil {
 						log.Println(err)
 						time.Sleep(RETRY_TIME)
+						continue
 					}
 					for _, i := range sca {
 						ne := Proxy{addr: i.IP, port: i.Port}
@@ -191,15 +194,17 @@ func saveProxies() {
 			func() {
 				for {
 					resp, err := http.Get("https://free-proxy-list.net/")
-					if err != nil || resp.Body == nil {
+					if err != nil {
 						log.Println(err)
 						time.Sleep(RETRY_TIME)
+						continue
 					}
 					conte, err := ioutil.ReadAll(resp.Body)
 					resp.Body.Close()
 					if err != nil {
 						log.Println(err)
 						time.Sleep(RETRY_TIME)
+						continue
 					}
 					re, _ := regexp.Compile(`<tr><td>(\d+\.\d+\.\d+\.\d+)</td><td>(\d+)</td><td>.*</td><td>.*</td><td>.*</td><td>.*</td><td>(yes|no)</td><td>.*</td></tr>`)
 					sca := re.FindAllStringSubmatch(string(conte), -1)
@@ -224,15 +229,17 @@ func saveProxies() {
 			func() {
 				for {
 					resp, err := http.Get("https://www.sslproxies.org/")
-					if err != nil || resp.Body == nil {
+					if err != nil {
 						log.Println(err)
 						time.Sleep(RETRY_TIME)
+						continue
 					}
 					conte, err := ioutil.ReadAll(resp.Body)
 					resp.Body.Close()
 					if err != nil {
 						log.Println(err)
 						time.Sleep(RETRY_TIME)
+						continue
 					}
 					re, _ := regexp.Compile(`<tr><td>(\d+\.\d+\.\d+\.\d+)</td><td>(\d+)</td>.*</tr>`)
 					sca := re.FindAllStringSubmatch(string(conte), -1)
