@@ -190,6 +190,38 @@ func saveProxies() {
 				}
 			},
 		})
+	updater = append(updater,
+		&Proxies{
+			func() {
+				for {
+					resp, err := http.Get("https://proxy.coderbusy.com/en-us/classical/https-ready.aspx")
+					if err != nil {
+						log.Println(err)
+						time.Sleep(RETRY_TIME)
+						continue
+					}
+					conte, err := ioutil.ReadAll(resp.Body)
+					resp.Body.Close()
+					if err != nil {
+						log.Println(err)
+						time.Sleep(RETRY_TIME)
+						continue
+					}
+					conte1 :=strings.Replace(string(conte), "\r\n", "", -1)
+					re, _ := regexp.Compile(`<span>(\d+\.\d+\.\d+\.\d+)</span>.*?</td>.*?<td>.*?<script type="text/javascript">.*?(\d+).*?</script>`)
+					sca := re.FindAllStringSubmatch(conte1, -1)
+					for _, i := range sca {
+						log.Println(i)
+						if len(i) != 3 {
+							log.Fatal("Unexpected error: ", i)
+						}
+						ne := Proxy{"https", i[1], i[2]}
+						addProxy(ne)
+					}
+					time.Sleep(5 * time.Minute)
+				}
+			},
+		})
 }
 
 func next(now string, count int64) int64 {
