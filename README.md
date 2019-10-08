@@ -4,7 +4,7 @@
 A working brute-force machine for BaiduYun private share links.
 
 # Example
-![Example-GIF](https://superfashi.b0.upaiyun.com/wp-content/uploads/2016/11/a.gif)
+![Example-GIF](https://www.superfashi.com/wp-content/uploads/2016/11/a.gif)
 
 Try running this link on your own computer/server!
 
